@@ -1,0 +1,32 @@
+[11:26:55.338][info] [#0:/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server/main.lua:49]: Lua Lsp startup, root: 	/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server
+[11:26:55.339][debug][#0:/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server/main.lua:50]: ROOT:	/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server
+[11:26:55.339][debug][#0:/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server/main.lua:51]: LOGPATH:	/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server/log
+[11:26:55.339][debug][#0:/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server/main.lua:52]: METAPATH:	/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server/meta
+[11:26:55.339][debug][#0:/Users/emilianobonilla/Desktop/synnaxlabs/synnax/vendor/lua-language-server/main.lua:53]: VERSION:	2.5.0-dev
+[11:26:55.366][info] [#0:script/service/telemetry.lua:21]: Telemetry Token:	1342F7BB198CCD60
+[11:26:55.369][info] [#0:script/pub/pub.lua:48]: Create brave:	1
+[11:26:55.369][info] [#0:script/pub/pub.lua:48]: Create brave:	2
+[11:26:55.369][info] [#0:script/pub/pub.lua:48]: Create brave:	3
+[11:26:55.369][info] [#0:script/pub/pub.lua:48]: Create brave:	4
+[11:26:55.369][debug][#0:script/service/service.lua:138]: 
+========= Medical Examination Report =========
+    --------------- Memory ---------------
+        Total: 1.321 MB
+        # 00 : 1.321 MB
+        # 01 : 0.000 MB
+        # 02 : 0.000 MB
+        # 03 : 0.000 MB
+        # 04 : 0.000 MB
+    --------------- Coroutine ---------------
+        Total:     0
+        Running:   0
+        Suspended: 0
+        Normal:    0
+        Dead:      0
+    --------------- Cache ---------------
+        Total: 1
+        Dead:  0
+    --------------- Proto ---------------
+        Holdon:   0
+        Waiting:  0
+==============================================
