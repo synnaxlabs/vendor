@@ -1,3 +1,47 @@
+genrule(
+    name = "build_open62541",
+    srcs = glob(["**/*"]),
+    outs = select({
+        "@platforms//os:windows": [
+            "lib/open62541.lib",
+            "include/open62541/plugin/accesscontrol_default.h",
+            # Add other necessary header files
+        ],
+        "//conditions:default": [
+            "lib/libopen62541.a",
+            "include/open62541/plugin/accesscontrol_default.h",
+            # Add other necessary header files
+        ],
+    }),
+    cmd_bash = """
+        rm -rf ./build && rm -rf ./out
+        mkdir -p build && cd build
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+              -DCMAKE_INSTALL_PREFIX=../$(GENDIR)/open62541/out \
+              -DUA_ENABLE_ENCRYPTION=MBEDTLS \
+              -DUA_NAMESPACE_ZERO=FULL ..
+        make -j4
+        make install
+        cp -r ../$(GENDIR)/open62541/out/lib/* $(BINDIR)/open62541/lib/
+        cp -r ../$(GENDIR)/open62541/out/include/* $(BINDIR)/open62541/include/
+    """,
+    cmd_bat = """
+        rmdir /s /q build 2>nul & rmdir /s /q out 2>nul
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
+              -DUA_NAMESPACE_ZERO=FULL ^
+              -DCMAKE_INSTALL_PREFIX=../$(GENDIR)/open62541/out ^
+              -DUA_ENABLE_ENCRYPTION=MBEDTLS ^
+              -DMBEDTLS_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedtls.lib" ^
+              -DMBEDX509_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedx509.lib" ^
+              -DMBEDCRYPTO_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedcrypto.lib" ^
+              -DMBEDTLS_INCLUDE_DIRS="C:\\Program Files (x86)\\Mbed TLS\\include" ..
+        cmake --build . --config RelWithDebInfo --target install
+        xcopy /E /I /Y ..\\$(GENDIR)\\open62541\\out\\lib\\* $(BINDIR)\\open62541\\lib\\
+        xcopy /E /I /Y ..\\$(GENDIR)\\open62541\\out\\include\\* $(BINDIR)\\open62541\\include\\
+    """,
+)
+
 cc_library(
     name = "open62541",
     srcs = select({
@@ -10,5 +54,5 @@ cc_library(
     ]),
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
-
+    deps = [":build_open62541"],
 )
