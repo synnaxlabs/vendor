@@ -78,7 +78,10 @@ genrule(
 
 cc_library(
     name = "open62541",
-    srcs = [":build_open62541"],
+    srcs = select({
+        "@platforms//os:windows": ["lib/open62541.lib"],
+        "//conditions:default": ["lib/libopen62541.a"],
+    }),
     hdrs = [":build_open62541"],
     includes = ["include"],
     strip_include_prefix = "include",
