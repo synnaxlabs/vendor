@@ -1,41 +1,97 @@
-load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
-
-filegroup(
-    name = "open62541_sources",
+genrule(
+    name = "build_open62541",
     srcs = glob(["open62541/**"]),
-)
-
-cmake(
-    name = "open62541_cmake",
-    lib_source = ":open62541_sources",
-    out_static_libs = select({
-        "@platforms//os:windows": ["open62541.lib"],
-        "//conditions:default": ["libopen62541.a"],
-    }),
-    generate_args = select({
-        "@platforms//os:windows": [
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
-            "-DUA_NAMESPACE_ZERO=FULL",
-            "-DUA_ENABLE_ENCRYPTION=MBEDTLS",
-            "-DMBEDTLS_LIBRARY=C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedtls.lib",
-            "-DMBEDX509_LIBRARY=C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedx509.lib",
-            "-DMBEDCRYPTO_LIBRARY=C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedcrypto.lib",
-            "-DMBEDTLS_INCLUDE_DIRS=C:\\Program Files (x86)\\Mbed TLS\\include",
-            "-DCMAKE_OSX_ARCHITECTURES=x86_64",
-        ],
-        "//conditions:default": [
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
-            "-DUA_NAMESPACE_ZERO=FULL",
-            "-DUA_ENABLE_ENCRYPTION=MBEDTLS",
-        ],
+    outs = [
+        "lib/open62541.lib",  # Windows will create this
+        "lib/libopen62541.a", # Unix will create this
+        "include/open62541/client.h",
+        "include/open62541/client_config_default.h",
+        "include/open62541/client_highlevel.h",
+        "include/open62541/client_highlevel_async.h",
+        "include/open62541/client_subscriptions.h",
+        "include/open62541/common.h",
+        "include/open62541/config.h",
+        "include/open62541/nodeids.h",
+        "include/open62541/server.h",
+        "include/open62541/server_config_default.h",
+        "include/open62541/server_config_file_based.h",
+        "include/open62541/server_pubsub.h",
+        "include/open62541/statuscodes.h",
+        "include/open62541/types.h",
+        "include/open62541/types_generated.h",
+        "include/open62541/types_generated_handling.h",
+        "include/open62541/util.h",
+        "include/open62541/plugin/accesscontrol.h",
+        "include/open62541/plugin/accesscontrol_default.h",
+        "include/open62541/plugin/create_certificate.h",
+        "include/open62541/plugin/eventloop.h",
+        "include/open62541/plugin/historydatabase.h",
+        "include/open62541/plugin/log.h",
+        "include/open62541/plugin/log_stdout.h",
+        "include/open62541/plugin/log_syslog.h",
+        "include/open62541/plugin/nodestore.h",
+        "include/open62541/plugin/nodestore_default.h",
+        "include/open62541/plugin/pki.h",
+        "include/open62541/plugin/pki_default.h",
+        "include/open62541/plugin/securitypolicy.h",
+        "include/open62541/plugin/securitypolicy_default.h",
+        "include/open62541/plugin/historydata/history_data_backend.h",
+        "include/open62541/plugin/historydata/history_data_backend_memory.h",
+        "include/open62541/plugin/historydata/history_data_gathering.h",
+        "include/open62541/plugin/historydata/history_data_gathering_default.h",
+        "include/open62541/plugin/historydata/history_database_default.h",
+    ],
+    cmd_bash = select({
+        "@platforms//os:windows": """
+            cd ./vendor/open62541/open62541
+            rm -rf ./build && rm -rf ./out
+            mkdir -p build && cd build
+            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \\
+                 -DUA_NAMESPACE_ZERO=FULL \\
+                 -DCMAKE_INSTALL_PREFIX=../out \\
+                 -DUA_ENABLE_ENCRYPTION=MBEDTLS \\
+                 -DMBEDTLS_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedtls.lib" \\
+                 -DMBEDX509_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedx509.lib" \\
+                 -DMBEDCRYPTO_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedcrypto.lib" \\
+                 -DMBEDTLS_INCLUDE_DIRS="C:\\Program Files (x86)\\Mbed TLS\\include" \\
+                 -DCMAKE_OSX_ARCHITECTURES=x86_64 ..
+            cmake --build . --config RelWithDebInfo --target install
+            cd ../../../../
+            cp -R ./vendor/open62541/open62541/out/lib $(GENDIR)/vendor/open62541
+            cp -R ./vendor/open62541/open62541/out/include $(GENDIR)/vendor/open62541
+            # Create empty Unix library to satisfy Bazel
+            touch $(GENDIR)/vendor/open62541/lib/libopen62541.a
+            touch $(GENDIR)/vendor/open62541/include/open62541/plugin/log_syslog.h
+        """,
+        "//conditions:default": """
+            cd ./vendor/open62541/open62541
+            rm -rf ./build && rm -rf ./out
+            mkdir -p build && cd build
+            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+                 -DUA_NAMESPACE_ZERO=FULL \
+                 -DCMAKE_INSTALL_PREFIX=../out \
+                 -DUA_ENABLE_ENCRYPTION=MBEDTLS ..
+            cmake --build . --config RelWithDebInfo --target install
+            cd ../../../../
+            cp -R ./vendor/open62541/open62541/out/lib $(GENDIR)/vendor/open62541
+            cp -R ./vendor/open62541/open62541/out/include $(GENDIR)/vendor/open62541
+            # Create empty Windows library to satisfy Bazel
+            touch $(GENDIR)/vendor/open62541/lib/open62541.lib
+        """,
     }),
 )
 
 cc_library(
     name = "open62541",
+    srcs = select({
+        "@platforms//os:windows": ["lib/open62541.lib"],
+        "//conditions:default": ["lib/libopen62541.a"],
+    }),
+    hdrs = [":build_open62541"],
+    includes = ["include"],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
     deps = [
-        ":open62541_cmake",
         "//vendor/mbedtls",
     ],
-    visibility = ["//visibility:public"],
 )
