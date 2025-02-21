@@ -44,19 +44,24 @@ genrule(
     cmd_bash = select({
         "@platforms//os:windows": """
             cd ./vendor/open62541/open62541
-            if exist build rd /s /q build
-            if exist out rd /s /q out
-            mkdir build && cd build
-            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
-                 -DUA_NAMESPACE_ZERO=FULL ^
-                 -DCMAKE_INSTALL_PREFIX=../out ^
-                 -DUA_ENABLE_ENCRYPTION=MBEDTLS ..
+            rm -rf ./build && rm -rf ./out
+            mkdir -p build && cd build
+            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \\
+                 -DUA_NAMESPACE_ZERO=FULL \\
+                 -DCMAKE_INSTALL_PREFIX=../out \\
+                 -DUA_ENABLE_ENCRYPTION=MBEDTLS \\
+                 -DMBEDTLS_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedtls.lib" \\
+                 -DMBEDX509_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedx509.lib" \\
+                 -DMBEDCRYPTO_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedcrypto.lib" \\
+                 -DMBEDTLS_INCLUDE_DIRS="C:\\Program Files (x86)\\Mbed TLS\\include" \\
+                 -DCMAKE_OSX_ARCHITECTURES=x86_64 ..
             cmake --build . --config RelWithDebInfo --target install
             cd ../../../../
-            xcopy /E /I /Y .\\vendor\\open62541\\open62541\\out\\lib $(GENDIR)\\vendor\\open62541\\lib
-            xcopy /E /I /Y .\\vendor\\open62541\\open62541\\out\\include $(GENDIR)\\vendor\\open62541\\include
+            cp -R ./vendor/open62541/open62541/out/lib $(GENDIR)/vendor/open62541
+            cp -R ./vendor/open62541/open62541/out/include $(GENDIR)/vendor/open62541
             # Create empty Unix library to satisfy Bazel
-            type nul > $(GENDIR)\\vendor\\open62541\\lib\\libopen62541.a
+            touch $(GENDIR)/vendor/open62541/lib/libopen62541.a
+            touch $(GENDIR)/vendor/open62541/include/open62541/plugin/log_syslog.h
         """,
         "//conditions:default": """
             cd ./vendor/open62541/open62541
@@ -74,6 +79,9 @@ genrule(
             touch $(GENDIR)/vendor/open62541/lib/open62541.lib
         """,
     }),
+    deps = [
+        "//vendor/mbedtls",
+    ],  
 )
 
 cc_library(
@@ -86,4 +94,7 @@ cc_library(
     includes = ["include"],
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/mbedtls",
+    ],
 )
