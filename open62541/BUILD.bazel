@@ -79,9 +79,6 @@ genrule(
             touch $(GENDIR)/vendor/open62541/lib/open62541.lib
         """,
     }),
-    deps = [
-        "//vendor/mbedtls",
-    ],  
 )
 
 cc_library(
