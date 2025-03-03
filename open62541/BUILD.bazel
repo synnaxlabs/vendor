@@ -1,9 +1,9 @@
 genrule(
     name = "build_open62541",
-    srcs = glob(["open62541/**"]),
+    srcs = glob(["open62541/**"]) + ["//vendor/mbedtls:build_mbedtls"],
     outs = [
         "lib/open62541.lib",  # Windows will create this
-        "lib/libopen62541.a", # Unix will create this
+        "lib/libopen62541.a",  # Unix will create this
         "include/open62541/client.h",
         "include/open62541/client_config_default.h",
         "include/open62541/client_highlevel.h",
@@ -43,36 +43,45 @@ genrule(
     ],
     cmd_bash = select({
         "@platforms//os:windows": """
-            cd ./vendor/open62541/open62541
-            rm -rf ./build && rm -rf ./out
-            mkdir -p build && cd build
-            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \\
-                 -DUA_NAMESPACE_ZERO=FULL \\
-                 -DCMAKE_INSTALL_PREFIX=../out \\
-                 -DUA_ENABLE_ENCRYPTION=MBEDTLS \\
-                 -DMBEDTLS_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedtls.lib" \\
-                 -DMBEDX509_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedx509.lib" \\
-                 -DMBEDCRYPTO_LIBRARY="C:\\Program Files (x86)\\Mbed TLS\\lib\\mbedcrypto.lib" \\
-                 -DMBEDTLS_INCLUDE_DIRS="C:\\Program Files (x86)\\Mbed TLS\\include" \\
-                 -DCMAKE_OSX_ARCHITECTURES=x86_64 ..
-            cmake --build . --config RelWithDebInfo --target install
-            cd ../../../../
-            cp -R ./vendor/open62541/open62541/out/lib $(GENDIR)/vendor/open62541
-            cp -R ./vendor/open62541/open62541/out/include $(GENDIR)/vendor/open62541
+            rm -rf ./vendor/open62541/open62541/build && rm -rf ./vendor/open62541/open62541/out
+            mkdir -p ./vendor/open62541/open62541/build
+            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
+                 -DUA_NAMESPACE_ZERO=FULL ^
+                 -DCMAKE_INSTALL_PREFIX=./vendor/open62541/open62541/out ^
+                 -DUA_ENABLE_ENCRYPTION=MBEDTLS ^
+                 -DMBEDTLS_LIBRARY="$(GENDIR)/vendor/mbedtls/lib/mbedtls.lib" ^
+                 -DMBEDX509_LIBRARY="$(GENDIR)/vendor/mbedtls/lib/mbedx509.lib" ^
+                 -DMBEDCRYPTO_LIBRARY="$(GENDIR)/vendor/mbedtls/lib/mbedcrypto.lib" ^
+                 -DMBEDTLS_INCLUDE_DIRS="$(GENDIR)/vendor/mbedtls/include" ^
+                 -DCMAKE_OSX_ARCHITECTURES=x86_64 ^
+                 -B./vendor/open62541/open62541/build ^
+                 -S./vendor/open62541/open62541 ^
+                 ./vendor/open62541/open62541
+            cmake --build ./vendor/open62541/open62541/build --config RelWithDebInfo --target install
+            mkdir -p $(GENDIR)/vendor/open62541/lib
+            mkdir -p $(GENDIR)/vendor/open62541/include
+            cp -R ./vendor/open62541/open62541/out/lib/* $(GENDIR)/vendor/open62541/lib/
+            cp -R ./vendor/open62541/open62541/out/include/* $(GENDIR)/vendor/open62541/include/
             # Create empty Unix library to satisfy Bazel
             touch $(GENDIR)/vendor/open62541/lib/libopen62541.a
             touch $(GENDIR)/vendor/open62541/include/open62541/plugin/log_syslog.h
         """,
         "//conditions:default": """
-            cd ./vendor/open62541/open62541
-            rm -rf ./build && rm -rf ./out
-            mkdir -p build && cd build
+            mbedtls_dir="$(GENDIR)/vendor/mbedtls"
+            rm -rf ./vendor/open62541/open62541/build && rm -rf ./vendor/open62541/open62541/out
+            mkdir -p ./vendor/open62541/open62541/build
             cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
                  -DUA_NAMESPACE_ZERO=FULL \
-                 -DCMAKE_INSTALL_PREFIX=../out \
-                 -DUA_ENABLE_ENCRYPTION=MBEDTLS ..
-            cmake --build . --config RelWithDebInfo --target install
-            cd ../../../../
+                 -DCMAKE_INSTALL_PREFIX=./vendor/open62541/open62541/out \
+                 -DUA_ENABLE_ENCRYPTION=MBEDTLS  \
+                 -DMBEDTLS_INCLUDE_DIRS=$${mbedtls_dir}/include \
+                 -DMBEDTLS_LIBRARY=$${mbedtls_dir}/lib/libmbedtls.a \
+                 -DMBEDX509_LIBRARY=$${mbedtls_dir}/lib/libmbedx509.a \
+                 -DMBEDCRYPTO_LIBRARY=$${mbedtls_dir}/lib/libmbedcrypto.a \
+                 -B./vendor/open62541/open62541/build \
+                 -S./vendor/open62541/open62541 \
+                    ./vendor/open62541/open62541
+            cmake --build ./vendor/open62541/open62541/build --config RelWithDebInfo --target install
             cp -R ./vendor/open62541/open62541/out/lib $(GENDIR)/vendor/open62541
             cp -R ./vendor/open62541/open62541/out/include $(GENDIR)/vendor/open62541
             # Create empty Windows library to satisfy Bazel
@@ -94,4 +103,10 @@ cc_library(
     deps = [
         "//vendor/mbedtls",
     ],
+    linkopts = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+
+        ],
+    }),
 )
