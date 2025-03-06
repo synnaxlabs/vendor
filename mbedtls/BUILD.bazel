@@ -154,21 +154,21 @@ genrule(
             touch $(GENDIR)/vendor/mbedtls/lib/libmbedx509.a
         """,
         "//conditions:default": """
-            rm -rf ./vendor/mbedtls/mbedtls/build && rm -r ./vendor/mbedtls/mbedtls/out
-            mkdir -p ./vendor/mbedtls/mbedtls/build
+            rm -rf ./vendor/mbedtls/build && rm -rf ./vendor/mbedtls/out
+            mkdir -p ./vendor/mbedtls/build
             cmake -DCMAKE_BUILD_TYPE=Release \
-                  -DCMAKE_INSTALL_PREFIX=./vendor/mbedtls/mbedtls/out \
+                  -DCMAKE_INSTALL_PREFIX=./vendor/mbedtls/out \
                   -DUSE_STATIC_MBEDTLS_LIBRARY=ON \
                   -DUSE_SHARED_MBEDTLS_LIBRARY=OFF \
                   -DENABLE_PROGRAMS=OFF \
                   -DENABLE_TESTING=OFF \
                   -DINSTALL_MBEDTLS_HEADERS=ON \
                   -DMBEDTLS_FATAL_WARNINGS=OFF \
-                  -B./vendor/mbedtls/mbedtls/build \
+                  -B./vendor/mbedtls/build \
                   -S./vendor/mbedtls/mbedtls
-            cmake --build ./vendor/mbedtls/mbedtls/build --target install
-            cp -R ./vendor/mbedtls/mbedtls/out/lib $(GENDIR)/vendor/mbedtls
-            cp -R ./vendor/mbedtls/mbedtls/out/include $(GENDIR)/vendor/mbedtls
+            cmake --build ./vendor/mbedtls/build --target install
+            cp -R ./vendor/mbedtls/out/lib $(GENDIR)/vendor/mbedtls
+            cp -R ./vendor/mbedtls/out/include $(GENDIR)/vendor/mbedtls
             # Create empty Windows libraries to satisfy Bazel
             touch $(GENDIR)/vendor/mbedtls/lib/mbedcrypto.lib
             touch $(GENDIR)/vendor/mbedtls/lib/mbedtls.lib
