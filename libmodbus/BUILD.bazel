@@ -1,0 +1,64 @@
+genrule(
+    name = "build_libmodbus",
+    srcs = glob(["libmodbus/**"]),
+    outs = [
+        # Header files
+        "include/modbus/modbus.h",
+        "include/modbus/modbus-rtu.h",
+        "include/modbus/modbus-tcp.h",
+        "include/modbus/modbus-version.h",
+        
+        # Library files
+        "lib/libmodbus.a",  # Unix library
+        "lib/modbus.lib",   # Windows library
+    ],
+    cmd_bash = select({
+        "@platforms//os:windows": """
+            # Get absolute path for prefix
+            PREFIX_PATH="$$(pwd)/$(GENDIR)/vendor/libmodbus"
+            
+            cd ./vendor/libmodbus/libmodbus
+            ./autogen.sh
+            ./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static
+            make
+            make install
+            
+            # Create directory for Windows library if it doesn't exist
+            mkdir -p "$$PREFIX_PATH/lib"
+            # Create empty Unix library to satisfy Bazel
+            touch "$$PREFIX_PATH/lib/libmodbus.a"
+        """,
+        "//conditions:default": """
+            # Get absolute path for prefix
+            PREFIX_PATH="$$(pwd)/$(GENDIR)/vendor/libmodbus"
+            
+            cd ./vendor/libmodbus/libmodbus
+            ./autogen.sh
+            ./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static
+            make
+            make install
+            
+            # Create directory for Windows library if it doesn't exist
+            mkdir -p "$$PREFIX_PATH/lib"
+            # Create empty Windows library to satisfy Bazel
+            touch "$$PREFIX_PATH/lib/modbus.lib"
+        """,
+    }),
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "libmodbus",
+    srcs = select({
+        "@platforms//os:windows": ["lib/modbus.lib"],
+        "//conditions:default": ["lib/libmodbus.a"],
+    }),
+    hdrs = [":build_libmodbus"],
+    includes = ["include"],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+    linkopts = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": [],
+    }),
+)
