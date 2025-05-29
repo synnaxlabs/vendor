@@ -13,20 +13,21 @@ genrule(
         "lib/modbus.lib",   # Windows library
     ],
     cmd_bash = select({
-        "@platforms//os:windows": """
-            # Get absolute path for prefix
+       "@platforms//os:windows": """
+            MSYS2_ROOT="$${MSYS2_ROOT:-C:/msys64}"
+            MSYS2_BASH="$${MSYS2_ROOT}/usr/bin/bash.exe"
             PREFIX_PATH="$$(pwd)/$(GENDIR)/vendor/libmodbus"
-            
-            cd ./vendor/libmodbus/libmodbus
-            ./autogen.sh
-            ./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static
-            make
-            make install
-            
-            # Create directory for Windows library if it doesn't exist
-            mkdir -p "$$PREFIX_PATH/lib"
-            # Create empty Unix library to satisfy Bazel
-            touch "$$PREFIX_PATH/lib/libmodbus.a"
+
+            "$$MSYS2_BASH" -l -c '
+              set -e
+              cd "$$PWD/vendor/libmodbus/libmodbus"
+              ./autogen.sh
+              ./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static
+              make
+              make install
+              mkdir -p "$$PREFIX_PATH/lib"
+              touch "$$PREFIX_PATH/lib/libmodbus.a"
+            '
         """,
         "//conditions:default": """
             # Get absolute path for prefix
