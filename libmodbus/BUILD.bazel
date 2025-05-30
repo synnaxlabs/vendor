@@ -34,7 +34,6 @@ genrule(
             PREFIX_PATH="$$(pwd)/$(GENDIR)/vendor/libmodbus"
             
             cd ./vendor/libmodbus/libmodbus
-            ./autogen.sh
             ./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static
             make
             make install
