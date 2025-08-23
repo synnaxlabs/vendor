@@ -87,7 +87,8 @@ genrule(
         "src/modbus-rtu.c",
         "src/modbus-tcp.c",
     ],
-    cmd = """
+    cmd = select({
+        "@platforms//os:windows": """
 # First, copy and fix modbus.h header
 cp $(location libmodbus/src/modbus.h) $(@D)/modbus/modbus.h.tmp
 # Use Python to replace the MODBUS_API definitions and fix stdint.h
@@ -130,40 +131,100 @@ sed 's|#include "modbus.h"|#include "../modbus/modbus.h"|g' $(location libmodbus
 sed -i 's|#include "modbus-tcp.h"|#include "../modbus/modbus-tcp.h"|g' $(@D)/src/modbus-tcp.c  
 sed -i 's|#include "modbus-rtu.h"|#include "../modbus/modbus-rtu.h"|g' $(@D)/src/modbus-tcp.c
 """,
+        "//conditions:default": """
+# Unix/Mac - just copy headers as-is, use standard autotools build
+cp $(location libmodbus/src/modbus.h) $(@D)/modbus/modbus.h
+cp $(location libmodbus/src/modbus-tcp.h) $(@D)/modbus/modbus-tcp.h 
+cp $(location libmodbus/src/modbus-rtu.h) $(@D)/modbus/modbus-rtu.h
+cp $(location libmodbus/src/modbus-private.h) $(@D)/modbus-private.h
+cp $(location libmodbus/src/modbus-tcp-private.h) $(@D)/modbus-tcp-private.h
+cp $(location libmodbus/src/modbus-rtu-private.h) $(@D)/modbus-rtu-private.h
+# Sources aren't used on Unix, but copy for consistency
+cp $(location libmodbus/src/modbus.c) $(@D)/src/modbus.c
+cp $(location libmodbus/src/modbus-data.c) $(@D)/src/modbus-data.c
+cp $(location libmodbus/src/modbus-rtu.c) $(@D)/src/modbus-rtu.c
+cp $(location libmodbus/src/modbus-tcp.c) $(@D)/src/modbus-tcp.c
+""",
+    }),
+)
+
+# Build libmodbus using autotools for Unix/Mac (matches git history approach)
+genrule(
+    name = "build_libmodbus_unix",
+    srcs = glob(["libmodbus/**"]),
+    outs = [
+        "include/modbus/modbus.h",
+        "include/modbus/modbus-rtu.h",
+        "include/modbus/modbus-tcp.h", 
+        "include/modbus/modbus-version.h",
+        "lib/libmodbus.a",
+        "lib/modbus.lib",  # Empty file to satisfy Windows outs
+    ],
+    cmd = """
+# Get absolute path for prefix (from git history)
+PREFIX_PATH="$$(pwd)/$(GENDIR)/vendor/libmodbus"
+
+cd ./vendor/libmodbus/libmodbus
+./autogen.sh
+./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static
+make
+make install
+
+# Create directory for Windows library if it doesn't exist
+mkdir -p "$$PREFIX_PATH/lib"
+# Create empty Windows library to satisfy Bazel
+touch "$$PREFIX_PATH/lib/modbus.lib"
+""",
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "libmodbus",
-    srcs = [
-        ":prepare_static_sources",
-        ":generate_config_h",
-    ],
-    hdrs = [
-        ":prepare_static_sources",
-        ":generate_version_h",
-    ],
-    copts = [
-        "/DHAVE_CONFIG_H",
-        "/D_WIN32_WINNT=0x0600",
-        "/DMODBUS_API=",  # Override MODBUS_API for static linking
-        "/I$(GENDIR)/vendor/libmodbus",  # For config.h 
-    ],
-    defines = [
-        "HAVE_CONFIG_H",
-        "_WIN32_WINNT=0x0600", 
-        "MODBUS_API=",  # Override MODBUS_API for static linking
-        "MODBUS_STATIC",  # Force static mode
-    ] + select({
-        "@platforms//os:windows": [],
+    srcs = select({
+        "@platforms//os:windows": [
+            ":prepare_static_sources",
+            ":generate_config_h",
+        ],
+        "//conditions:default": ["lib/libmodbus.a"],  # Unix uses standard autotools output
+    }),
+    hdrs = select({
+        "@platforms//os:windows": [
+            ":prepare_static_sources", 
+            ":generate_version_h",
+        ],
+        "//conditions:default": [":build_libmodbus_unix"],  # Unix uses autotools headers
+    }),
+    copts = select({
+        "@platforms//os:windows": [
+            "/DHAVE_CONFIG_H",
+            "/D_WIN32_WINNT=0x0600",
+            "/DMODBUS_API=",  # Override MODBUS_API for static linking
+            "/I$(GENDIR)/vendor/libmodbus",  # For config.h 
+        ],
         "//conditions:default": [],
     }),
-    includes = [
-        ".",  # Generated files - allows modbus/modbus.h to be found
-    ],
+    defines = select({
+        "@platforms//os:windows": [
+            "HAVE_CONFIG_H",
+            "_WIN32_WINNT=0x0600", 
+            "MODBUS_API=",  # Override MODBUS_API for static linking
+            "MODBUS_STATIC",  # Force static mode
+        ],
+        "//conditions:default": [],
+    }),
+    includes = select({
+        "@platforms//os:windows": [
+            ".",  # Generated files - allows modbus/modbus.h to be found
+        ],
+        "//conditions:default": ["include"],  # Unix uses standard include/ from autotools
+    }),
     linkopts = select({
         "@platforms//os:windows": ["ws2_32.lib"],
         "//conditions:default": [],
     }),
-    strip_include_prefix = "",
+    strip_include_prefix = select({
+        "@platforms//os:windows": "",
+        "//conditions:default": "include",  # Unix strips include/ prefix (from git history)
+    }),
     visibility = ["//visibility:public"],
 )
