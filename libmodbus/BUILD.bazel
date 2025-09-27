@@ -192,12 +192,8 @@ touch -r configure.ac config.h.in || true
 make
 make install
 
-# Windows placeholder to satisfy declared out
 mkdir -p "$$PREFIX_PATH/lib"
 : > "$$PREFIX_PATH/lib/modbus.lib"
-
-mount -o remount /
-
 """,
     visibility = ["//visibility:public"],
 )
