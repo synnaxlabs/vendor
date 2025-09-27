@@ -165,34 +165,69 @@ genrule(
     cmd = """
 set -euo pipefail
 
+# Debug tracing
+set -x
+echo "[dbg] uname:"; uname -a || true
+echo "[dbg] id:"; id || true
+echo "[dbg] PWD:"; pwd
+echo "[dbg] initial ls -la:"; ls -la || true
+echo "[dbg] umask:"; umask || true
+echo "[dbg] df -h / /tmp:"; df -h / /tmp || true
+echo "[dbg] mount points (if available):"; (mount || cat /proc/mounts) 2>/dev/null | head -n 50 || true
+echo "[dbg] env (sorted):"; env | sort | head -n 200 || true
+
 # Install prefix is the genrule's output dir so it matches declared outs
 PREFIX_PATH="$$(pwd)/$(@D)"
+echo "[dbg] PREFIX_PATH=$$PREFIX_PATH"
+mkdir -p "$$PREFIX_PATH" || true
+if [ -w "$$PREFIX_PATH" ]; then echo "[dbg] prefix is writable"; else echo "[dbg] prefix is NOT writable"; fi
 
 # Build in a truly writable temp dir (outside Bazel's output tree) so autotools can touch files
 BUILD_DIR="$$(mktemp -d)"
+echo "[dbg] BUILD_DIR=$$BUILD_DIR"
+if [ -w "$$BUILD_DIR" ]; then echo "[dbg] build dir is writable"; else echo "[dbg] build dir is NOT writable"; fi
 trap 'rm -rf "$$BUILD_DIR"' EXIT
 
 # Copy the libmodbus source tree into the writable build dir
 cp -R ./vendor/libmodbus/libmodbus/. "$$BUILD_DIR"
 chmod -R u+w "$$BUILD_DIR"
+echo "[dbg] listing $$BUILD_DIR (depth 2):"; (cd "$$BUILD_DIR" && find . -maxdepth 2 -type f | sort | head -n 100) || true
 
 cd "$$BUILD_DIR"
+echo "[dbg] now in $$BUILD_DIR; ls -la:"; ls -la || true
 
 # Precreate autotools stamps so make doesn’t try to run autoheader in sandbox
 : > config.h.in || true
 : > stamp-h1 || true
 touch -r configure.ac config.h.in || true
+echo "[dbg] precreated autotools stamps:"; ls -l config.h.in stamp-h1 2>/dev/null || true
 
 # Avoid maintainer-only autotools regenerations
 export AM_MAINTAINER_MODE=disable
 export MAKEFLAGS="$${MAKEFLAGS:-}"
 
+# Force autotools helper tools to no-op so Makefile rules won’t try to regenerate files
+export ACLOCAL=:
+export AUTOCONF=:
+export AUTOHEADER=:
+export AUTOMAKE=:
+echo "[dbg] autotools env overrides set:"
+echo "  AM_MAINTAINER_MODE=$AM_MAINTAINER_MODE"
+echo "  MAKEFLAGS=$MAKEFLAGS"
+echo "  ACLOCAL=$ACLOCAL AUTOCONF=$AUTOCONF AUTOHEADER=$AUTOHEADER AUTOMAKE=$AUTOMAKE"
+
 # Configure & build static library; install into $(@D)
+echo "[dbg] running configure with --prefix=$$PREFIX_PATH --libdir=$$PREFIX_PATH/lib"
 ./configure --prefix="$$PREFIX_PATH" --libdir="$$PREFIX_PATH/lib" --disable-shared --enable-static --disable-maintainer-mode
+echo "[dbg] configure exited with $?; showing Makefile tops:"; (head -n 40 Makefile; echo "---"; head -n 40 src/Makefile) 2>/dev/null || true
 make
+echo "[dbg] make exited with $?; listing built artifacts (depth 2):"; find . -maxdepth 2 -type f -name "*.a" -o -name "*.o" | sort | head -n 200 || true
 make install
+echo "[dbg] make install exited with $?; installed files under $$PREFIX_PATH:"; (cd "$$PREFIX_PATH" && find . -maxdepth 3 -type f | sort) || true
+test -f "$$PREFIX_PATH/lib/libmodbus.a" && echo "[dbg] found libmodbus.a in lib/" || (echo "[dbg] libmodbus.a missing in lib/"; true)
 
 mkdir -p "$$PREFIX_PATH/lib"
+echo "[dbg] ensuring modbus.lib placeholder exists in $$PREFIX_PATH/lib"
 : > "$$PREFIX_PATH/lib/modbus.lib"
 """,
     visibility = ["//visibility:public"],
