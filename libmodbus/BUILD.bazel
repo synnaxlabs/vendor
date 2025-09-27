@@ -166,7 +166,7 @@ genrule(
 set -euo pipefail
 
 # Install prefix is the genrule's output dir so it matches declared outs
-PREFIX_PATH="$(@D)"
+PREFIX_PATH="$$(realpath $(@D))"
 
 # Build in a writable directory to avoid touching the read-only workspace sources
 BUILD_DIR="$(@D)/_build"
