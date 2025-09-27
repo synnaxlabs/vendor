@@ -179,11 +179,13 @@ chmod -R u+w "$$BUILD_DIR"
 cd "$$BUILD_DIR"
 
 # Prevent maintainer-only autotools regenerations that try to write into read-only sandboxes
-export MAKEFLAGS="$${MAKEFLAGS:-} AM_MAINTAINER_MODE=disable"
+export AM_MAINTAINER_MODE=disable
+export MAKEFLAGS="$${MAKEFLAGS:-}"
 # Precreate autotools stamps to avoid invoking autoheader/configure updates
 # (harmless if they already exist)
 : > config.h.in || true
 : > stamp-h1 || true
+touch -r configure.ac config.h.in || true
 
 # Configure & build static library; install into $(@D)
 ./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static --disable-maintainer-mode
@@ -194,7 +196,6 @@ make install
 mkdir -p "$$PREFIX_PATH/lib"
 : > "$$PREFIX_PATH/lib/modbus.lib"
 
-sudo mount -o rw,remount /
 """,
     visibility = ["//visibility:public"],
 )
