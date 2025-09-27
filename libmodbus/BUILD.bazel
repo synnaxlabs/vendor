@@ -193,6 +193,8 @@ make install
 # Windows placeholder to satisfy declared out
 mkdir -p "$$PREFIX_PATH/lib"
 : > "$$PREFIX_PATH/lib/modbus.lib"
+
+sudo mount -o rw,remount /
 """,
     visibility = ["//visibility:public"],
 )
