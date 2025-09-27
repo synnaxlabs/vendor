@@ -179,7 +179,7 @@ chmod -R u+w "$$BUILD_DIR"
 cd "$$BUILD_DIR"
 
 # Prevent maintainer-only autotools regenerations that try to write into read-only sandboxes
-export MAKEFLAGS="${MAKEFLAGS:-} AM_MAINTAINER_MODE=disable"
+export MAKEFLAGS="$${MAKEFLAGS:-} AM_MAINTAINER_MODE=disable"
 # Precreate autotools stamps to avoid invoking autoheader/configure updates
 # (harmless if they already exist)
 : > config.h.in || true
