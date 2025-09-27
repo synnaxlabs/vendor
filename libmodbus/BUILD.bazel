@@ -212,18 +212,18 @@ export AUTOCONF=:
 export AUTOHEADER=:
 export AUTOMAKE=:
 echo "[dbg] autotools env overrides set:"
-echo "  AM_MAINTAINER_MODE=$AM_MAINTAINER_MODE"
-echo "  MAKEFLAGS=$MAKEFLAGS"
-echo "  ACLOCAL=$ACLOCAL AUTOCONF=$AUTOCONF AUTOHEADER=$AUTOHEADER AUTOMAKE=$AUTOMAKE"
+echo "  AM_MAINTAINER_MODE=$$AM_MAINTAINER_MODE"
+echo "  MAKEFLAGS=$$MAKEFLAGS"
+echo "  ACLOCAL=$$ACLOCAL AUTOCONF=$$AUTOCONF AUTOHEADER=$$AUTOHEADER AUTOMAKE=$$AUTOMAKE"
 
 # Configure & build static library; install into $(@D)
 echo "[dbg] running configure with --prefix=$$PREFIX_PATH --libdir=$$PREFIX_PATH/lib"
 ./configure --prefix="$$PREFIX_PATH" --libdir="$$PREFIX_PATH/lib" --disable-shared --enable-static --disable-maintainer-mode
-echo "[dbg] configure exited with $?; showing Makefile tops:"; (head -n 40 Makefile; echo "---"; head -n 40 src/Makefile) 2>/dev/null || true
+echo "[dbg] configure exited with $$?; showing Makefile tops:"; (head -n 40 Makefile; echo "---"; head -n 40 src/Makefile) 2>/dev/null || true
 make
-echo "[dbg] make exited with $?; listing built artifacts (depth 2):"; find . -maxdepth 2 -type f -name "*.a" -o -name "*.o" | sort | head -n 200 || true
+echo "[dbg] make exited with $$?; listing built artifacts (depth 2):"; find . -maxdepth 2 -type f -name "*.a" -o -name "*.o" | sort | head -n 200 || true
 make install
-echo "[dbg] make install exited with $?; installed files under $$PREFIX_PATH:"; (cd "$$PREFIX_PATH" && find . -maxdepth 3 -type f | sort) || true
+echo "[dbg] make install exited with $$?; installed files under $$PREFIX_PATH:"; (cd "$$PREFIX_PATH" && find . -maxdepth 3 -type f | sort) || true
 test -f "$$PREFIX_PATH/lib/libmodbus.a" && echo "[dbg] found libmodbus.a in lib/" || (echo "[dbg] libmodbus.a missing in lib/"; true)
 
 mkdir -p "$$PREFIX_PATH/lib"
