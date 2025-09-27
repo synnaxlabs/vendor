@@ -1,3 +1,5 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 # Create Windows config.h header
 genrule(
     name = "generate_config_h",
@@ -65,7 +67,7 @@ genrule(
     name = "prepare_static_sources",
     srcs = [
         "libmodbus/src/modbus.h",
-        "libmodbus/src/modbus-tcp.h", 
+        "libmodbus/src/modbus-tcp.h",
         "libmodbus/src/modbus-rtu.h",
         "libmodbus/src/modbus-private.h",
         "libmodbus/src/modbus-tcp-private.h",
@@ -107,7 +109,7 @@ with open('$(@D)/modbus/modbus.h', 'w') as f:
 "
 
 # Copy other headers as-is
-cp $(location libmodbus/src/modbus-tcp.h) $(@D)/modbus/modbus-tcp.h 
+cp $(location libmodbus/src/modbus-tcp.h) $(@D)/modbus/modbus-tcp.h
 cp $(location libmodbus/src/modbus-rtu.h) $(@D)/modbus/modbus-rtu.h
 # Fix private headers to use correct modbus.h path
 sed 's|#include "modbus.h"|#include "modbus/modbus.h"|g' $(location libmodbus/src/modbus-private.h) > $(@D)/modbus-private.h
@@ -128,13 +130,13 @@ sed -i 's|#include "modbus-tcp.h"|#include "../modbus/modbus-tcp.h"|g' $(@D)/src
 sed -i 's|#include "modbus-rtu.h"|#include "../modbus/modbus-rtu.h"|g' $(@D)/src/modbus-rtu.c
 
 sed 's|#include "modbus.h"|#include "../modbus/modbus.h"|g' $(location libmodbus/src/modbus-tcp.c) > $(@D)/src/modbus-tcp.c
-sed -i 's|#include "modbus-tcp.h"|#include "../modbus/modbus-tcp.h"|g' $(@D)/src/modbus-tcp.c  
+sed -i 's|#include "modbus-tcp.h"|#include "../modbus/modbus-tcp.h"|g' $(@D)/src/modbus-tcp.c
 sed -i 's|#include "modbus-rtu.h"|#include "../modbus/modbus-rtu.h"|g' $(@D)/src/modbus-tcp.c
 """,
         "//conditions:default": """
 # Unix/Mac - just copy headers as-is, use standard autotools build
 cp $(location libmodbus/src/modbus.h) $(@D)/modbus/modbus.h
-cp $(location libmodbus/src/modbus-tcp.h) $(@D)/modbus/modbus-tcp.h 
+cp $(location libmodbus/src/modbus-tcp.h) $(@D)/modbus/modbus-tcp.h
 cp $(location libmodbus/src/modbus-rtu.h) $(@D)/modbus/modbus-rtu.h
 cp $(location libmodbus/src/modbus-private.h) $(@D)/modbus-private.h
 cp $(location libmodbus/src/modbus-tcp-private.h) $(@D)/modbus-tcp-private.h
@@ -155,25 +157,35 @@ genrule(
     outs = [
         "include/modbus/modbus.h",
         "include/modbus/modbus-rtu.h",
-        "include/modbus/modbus-tcp.h", 
+        "include/modbus/modbus-tcp.h",
         "include/modbus/modbus-version.h",
         "lib/libmodbus.a",
         "lib/modbus.lib",  # Empty file to satisfy Windows outs
     ],
     cmd = """
-# Get absolute path for prefix (from git history)
-PREFIX_PATH="$$(pwd)/$(GENDIR)/vendor/libmodbus"
+set -euo pipefail
 
-cd ./vendor/libmodbus/libmodbus
-# configure already exists, so skip autogen.sh
+# Install prefix is the genrule's output dir so it matches declared outs
+PREFIX_PATH="$(@D)"
+
+# Build in a writable directory to avoid touching the read-only workspace sources
+BUILD_DIR="$(@D)/_build"
+mkdir -p "$$BUILD_DIR"
+
+# Copy the libmodbus source tree into the writable build dir
+cp -R ./vendor/libmodbus/libmodbus/. "$$BUILD_DIR"
+chmod -R u+w "$$BUILD_DIR"
+
+cd "$$BUILD_DIR"
+
+# Configure & build static library; install into $(@D)
 ./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static
 make
 make install
 
-# Create directory for Windows library if it doesn't exist
+# Windows placeholder to satisfy declared out
 mkdir -p "$$PREFIX_PATH/lib"
-# Create empty Windows library to satisfy Bazel
-touch "$$PREFIX_PATH/lib/modbus.lib"
+: > "$$PREFIX_PATH/lib/modbus.lib"
 """,
     visibility = ["//visibility:public"],
 )
@@ -182,15 +194,15 @@ cc_library(
     name = "libmodbus",
     srcs = select({
         "@platforms//os:windows": [
-            ":prepare_static_sources",
             ":generate_config_h",
+            ":prepare_static_sources",
         ],
         "//conditions:default": ["lib/libmodbus.a"],  # Unix uses standard autotools output
     }),
     hdrs = select({
         "@platforms//os:windows": [
-            ":prepare_static_sources", 
             ":generate_version_h",
+            ":prepare_static_sources",
         ],
         "//conditions:default": [":build_libmodbus_unix"],  # Unix uses autotools headers
     }),
@@ -199,14 +211,14 @@ cc_library(
             "/DHAVE_CONFIG_H",
             "/D_WIN32_WINNT=0x0600",
             "/DMODBUS_API=",  # Override MODBUS_API for static linking
-            "/I$(GENDIR)/vendor/libmodbus",  # For config.h 
+            "/I$(GENDIR)/vendor/libmodbus",  # For config.h
         ],
         "//conditions:default": [],
     }),
     defines = select({
         "@platforms//os:windows": [
             "HAVE_CONFIG_H",
-            "_WIN32_WINNT=0x0600", 
+            "_WIN32_WINNT=0x0600",
             "MODBUS_API=",  # Override MODBUS_API for static linking
             "MODBUS_STATIC",  # Force static mode
         ],
