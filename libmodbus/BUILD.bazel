@@ -183,7 +183,7 @@ export AM_MAINTAINER_MODE=disable
 export MAKEFLAGS="$${MAKEFLAGS:-}"
 
 # Configure & build static library; install into $(@D)
-./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static --disable-maintainer-mode
+./configure --prefix="$$PREFIX_PATH" --libdir="$$PREFIX_PATH/lib" --disable-shared --enable-static --disable-maintainer-mode
 make
 make install
 
