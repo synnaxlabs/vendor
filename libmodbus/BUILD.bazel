@@ -189,12 +189,18 @@ if [ -w "$$BUILD_DIR" ]; then echo "[dbg] build dir is writable"; else echo "[db
 trap 'rm -rf "$$BUILD_DIR"' EXIT
 
 # Copy the libmodbus source tree into the writable build dir
-cp -R ./vendor/libmodbus/libmodbus/. "$$BUILD_DIR"
+cp -RL ./vendor/libmodbus/libmodbus/. "$$BUILD_DIR"
 chmod -R u+w "$$BUILD_DIR"
 echo "[dbg] listing $$BUILD_DIR (depth 2):"; (cd "$$BUILD_DIR" && find . -maxdepth 2 -type f | sort | head -n 100) || true
 
 cd "$$BUILD_DIR"
 echo "[dbg] now in $$BUILD_DIR; ls -la:"; ls -la || true
+
+# Ensure config.h.in is a regular file (not a symlink into the read-only workspace)
+if [ -L config.h.in ]; then
+  echo "[dbg] replacing symlinked config.h.in with regular file"
+  rm -f config.h.in || true
+fi
 
 # Precreate autotools stamps so make doesn’t try to run autoheader in sandbox
 : > config.h.in || true
