@@ -166,21 +166,21 @@ genrule(
 set -euo pipefail
 
 # Install prefix is the genrule's output dir so it matches declared outs
-PREFIX_PATH="$$(realpath $(@D))"
+PREFIX_PATH="$$(pwd)/$(@D)"
 
 # Build in a truly writable temp dir (outside Bazel's output tree) so autotools can touch files
 BUILD_DIR="$$(mktemp -d)"
-trap 'rm -rf "$BUILD_DIR"' EXIT
+trap 'rm -rf "$$BUILD_DIR"' EXIT
 
 # Copy the libmodbus source tree into the writable build dir
-cp -R ./vendor/libmodbus/libmodbus/. "$BUILD_DIR"
-chmod -R u+w "$BUILD_DIR"
+cp -R ./vendor/libmodbus/libmodbus/. "$$BUILD_DIR"
+chmod -R u+w "$$BUILD_DIR"
 
-cd "$BUILD_DIR"
+cd "$$BUILD_DIR"
 
 # Avoid maintainer-only autotools regenerations
 export AM_MAINTAINER_MODE=disable
-export MAKEFLAGS="${MAKEFLAGS:-}"
+export MAKEFLAGS="$${MAKEFLAGS:-}"
 
 # Configure & build static library; install into $(@D)
 ./configure --prefix="$$PREFIX_PATH" --disable-shared --enable-static --disable-maintainer-mode
