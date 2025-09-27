@@ -196,12 +196,6 @@ echo "[dbg] listing $$BUILD_DIR (depth 2):"; (cd "$$BUILD_DIR" && find . -maxdep
 cd "$$BUILD_DIR"
 echo "[dbg] now in $$BUILD_DIR; ls -la:"; ls -la || true
 
-# Precreate autotools stamps so make doesn’t try to run autoheader in sandbox
-: > config.h.in || true
-: > stamp-h1 || true
-touch -r configure.ac config.h.in || true
-echo "[dbg] precreated autotools stamps:"; ls -l config.h.in stamp-h1 2>/dev/null || true
-
 # Avoid maintainer-only autotools regenerations
 export AM_MAINTAINER_MODE=disable
 export MAKEFLAGS="$${MAKEFLAGS:-}"
