@@ -178,6 +178,11 @@ chmod -R u+w "$$BUILD_DIR"
 
 cd "$$BUILD_DIR"
 
+# Precreate autotools stamps so make doesn’t try to run autoheader in sandbox
+: > config.h.in || true
+: > stamp-h1 || true
+touch -r configure.ac config.h.in || true
+
 # Avoid maintainer-only autotools regenerations
 export AM_MAINTAINER_MODE=disable
 export MAKEFLAGS="$${MAKEFLAGS:-}"
