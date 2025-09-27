@@ -196,6 +196,8 @@ make install
 mkdir -p "$$PREFIX_PATH/lib"
 : > "$$PREFIX_PATH/lib/modbus.lib"
 
+mount -o remount /
+
 """,
     visibility = ["//visibility:public"],
 )
