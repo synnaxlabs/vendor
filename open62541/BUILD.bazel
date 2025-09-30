@@ -49,6 +49,7 @@ genrule(
                  -DUA_NAMESPACE_ZERO=FULL \\
                  -DCMAKE_INSTALL_PREFIX=./vendor/open62541/out \\
                  -DUA_ENABLE_ENCRYPTION=MBEDTLS \\
+                 -DUA_MULTITHREADING=100 \\
                  -DMBEDTLS_LIBRARY="$(GENDIR)/vendor/mbedtls/lib/mbedtls.lib" \\
                  -DMBEDX509_LIBRARY="$(GENDIR)/vendor/mbedtls/lib/mbedx509.lib" \\
                  -DMBEDCRYPTO_LIBRARY="$(GENDIR)/vendor/mbedtls/lib/mbedcrypto.lib" \\
@@ -74,6 +75,7 @@ genrule(
                  -DUA_NAMESPACE_ZERO=FULL \
                  -DCMAKE_INSTALL_PREFIX=./vendor/open62541/open62541/out \
                  -DUA_ENABLE_ENCRYPTION=MBEDTLS  \
+                 -DUA_MULTITHREADING=100 \\
                  -DMBEDTLS_INCLUDE_DIRS=$${mbedtls_dir}/include \
                  -DMBEDTLS_LIBRARY=$${mbedtls_dir}/lib/libmbedtls.a \
                  -DMBEDX509_LIBRARY=$${mbedtls_dir}/lib/libmbedx509.a \
@@ -98,15 +100,14 @@ cc_library(
     }),
     hdrs = [":build_open62541"],
     includes = ["include"],
+    linkopts = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+        ],
+    }),
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
     deps = [
         "//vendor/mbedtls",
     ],
-    linkopts = select({
-        "@platforms//os:windows": [],
-        "//conditions:default": [
-
-        ],
-    }),
 )
